@@ -1,0 +1,74 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score
+import nltk
+from nltk.corpus import stopwords
+import string
+
+# Download stopwords (first-time only)
+nltk.download('stopwords')
+stop_words = set(stopwords.words('english'))
+
+# Sample Data (You can replace this with your own)
+data = {
+    'text': [
+        "I love this movie, it's fantastic!",
+        "This film was horrible, I hated it.",
+        "What a wonderful performance!",
+        "Terrible script and bad acting.",
+        "Absolutely amazing experience.",
+        "Worst movie I've ever seen.",
+        "It's okay, not great but not bad.",
+        "I enjoyed the plot and the acting.",
+        "Too slow and boring.",
+        "Loved every minute of it."
+    ],
+    'sentiment': ['positive', 'negative', 'positive', 'negative', 'positive', 'negative', 'neutral', 'positive', 'negative', 'positive']
+}
+
+# Convert to DataFrame
+df = pd.DataFrame(data)
+
+# Optional: Remove neutral entries (binary classification)
+df = df[df['sentiment'] != 'neutral']
+
+# Text Preprocessing
+def preprocess(text):
+    text = text.lower()
+    text = ''.join([c for c in text if c not in string.punctuation])
+    words = text.split()
+    words = [word for word in words if word not in stop_words]
+    return ' '.join(words)
+
+df['clean_text'] = df['text'].apply(preprocess)
+
+# Vectorization
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(df['clean_text'])
+
+# Target Labels
+y = df['sentiment'].map({'positive': 1, 'negative': 0})
+
+# Train/Test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train Model
+model = MultinomialNB()
+model.fit(X_train, y_train)
+
+# Predict & Evaluate
+y_pred = model.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred))
+
+# Test on new sentence
+def predict_sentiment(sentence):
+    cleaned = preprocess(sentence)
+    vectorized = vectorizer.transform([cleaned])
+    result = model.predict(vectorized)[0]
+    return 'Positive' if result == 1 else 'Negative'
+
+# Example
+print(predict_sentiment("The movie was awesome and thrilling!"))
+print(predict_sentiment("I did not like the story at all."))
